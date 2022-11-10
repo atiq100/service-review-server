@@ -43,6 +43,14 @@ async function run(){
         })
 
         //review api
+        app.get('/reviews',async(req,res)=>{
+            const query = {} //for get all data
+            const cursor = reviewCollection.find(query);
+            const reviews = await cursor.toArray();
+             res.send(reviews);
+         })
+
+        //review post api
         app.post('/reviews',async(req,res)=>{
             const review = req.body;
             const result = await reviewCollection.insertOne(review);

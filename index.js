@@ -44,11 +44,35 @@ async function run(){
 
         //review api
         app.get('/reviews',async(req,res)=>{
-            const query = {} //for get all data
+            let query = {} //for get all data
+            if(req.query.service_id){
+                query = {
+                    service_id: req.query.service_id
+                }
+            }
             const cursor = reviewCollection.find(query);
+
             const reviews = await cursor.toArray();
+           
              res.send(reviews);
          })
+
+        // app.get('/reviews/:id',async(req,res)=>{
+        //     const id = req.params.id;
+        //     const query = {_id: ObjectId(id)} //for get all data
+           
+            // if(req.query.service_id){
+            //     query = {
+            //         service_id: req.query._id
+            //     }
+                 
+
+            // }
+
+        //     const review =await reviewCollection.findOne(query);
+        //     console.log(review);
+        //      res.send(review);
+        //  })
 
         //review post api
         app.post('/reviews',async(req,res)=>{

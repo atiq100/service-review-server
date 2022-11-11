@@ -1,10 +1,12 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port =process.env.PORT || 5000;
 
+//middlewares
 app.use(cors());
 app.use(express.json());
 
@@ -13,10 +15,32 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@clu
 
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+function verifyJWT(req,res,next){
+    const authHeader = req.headers.authorization;
+    if(!authHeader){
+        return res.status(401).send({message: 'unauthorized access'}) 
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,function(err,decoded){
+        if(err){
+            return res.status(403).send({message: 'Forbidden access'}) 
+        }
+        req.decoded = decoded;
+        next()
+    })
+}
+
 async function run(){
     try{
         const serviceCollection = client.db('dosofy').collection('services');
         const reviewCollection = client.db('dosofy').collection('reviews');
+
+        app.post('/jwt',(req,res)=>{
+            const user = req.body;
+            //console.log(user);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{expiresIn: '1h'})
+            res.send({token})
+        })
 
         //service api
         app.get('/services',async(req,res)=>{
@@ -49,23 +73,14 @@ async function run(){
             res.send(result);
         })
 
-        //review api
-        // app.get('/reviews',async(req,res)=>{
-        //     let query = {} //for get all data
-        //     if(req.query.service_id){
-        //         query = {
-        //             service_id: req.query.service_id
-        //         }
-        //     }
-        //     const cursor = reviewCollection.find(query).sort({lastModified:-1});
+       
 
-        //     const reviews = await cursor.toArray();
-           
-        //      res.send(reviews);
-        //  })
-
-         app.get('/reviews',async(req,res)=>{
-            console.log(req.query)
+         app.get('/reviews',verifyJWT,async(req,res)=>{
+            const decoded = req.decoded;
+            //console.log(decoded);
+            if(decoded.email !== req.query.email){
+                res.status(401).send({message: 'unauthorized access'})
+            }
             let query = {} //for get all data
             if(req.query.email){
                 query = {
@@ -85,31 +100,41 @@ async function run(){
          })
 
 
-        // app.get('/reviews/:id',async(req,res)=>{
-        //     const id = req.params.id;
-        //     const query = {_id: ObjectId(id)} //for get all data
-           
-            // if(req.query.service_id){
-            //     query = {
-            //         service_id: req.query._id
-            //     }
-                 
-
-            // }
-
-        //     const review =await reviewCollection.findOne(query);
-        //     console.log(review);
-        //      res.send(review);
-        //  })
-
+        
         //review post api
-        app.post('/reviews',async(req,res)=>{
+        app.post('/reviews',verifyJWT,async(req,res)=>{
             const review = req.body;
             const result = await reviewCollection.insertOne(review);
             res.send(result);
         })
 
-        app.delete('/reviews/:id',  async(req,res)=>{
+        app.get('/reviews/:id', async(req,res)=>{
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)}
+            const review = await reviewCollection.findOne(query)
+            res.send(review)
+        })
+        //update
+        app.patch('/reviews/:id',  async(req,res)=>{
+            const id =req.params.id;
+            const review = req.body
+            const query = {_id: ObjectId(id)}
+            const option = {upsert:true};
+
+            const updatedComment = {
+                $set:{
+                    comment:review.comment,
+                    
+
+                }
+            }
+            const result = await reviewCollection.updateOne(query,updatedComment,option);
+            res.send(result)
+
+        })
+        
+
+        app.delete('/reviews/:id',verifyJWT,  async(req,res)=>{
             const id = req.params.id;
             const query = {_id:ObjectId(id)};
             const result= await reviewCollection.deleteOne(query)

@@ -26,6 +26,13 @@ async function run(){
             res.send(services);
         })
 
+        app.get('/servicehome',async(req,res)=>{
+            const query = {} //for get all data
+            const cursor = serviceCollection.find(query).limit(3);
+            const servicehome = await cursor.toArray();
+             res.send(servicehome);
+         })
+
         //for get service data by specific id
         app.get('/services/:id', async(req,res)=>{
             const id = req.params.id;
@@ -36,38 +43,44 @@ async function run(){
         })
 
         // service post api
-        app.post('/addservice',async(req,res)=>{
+        app.post('/services',async(req,res)=>{
             const service = req.body;
             const result = await serviceCollection.insertOne(service);
             res.send(result);
         })
 
         //review api
-        app.get('/reviews',async(req,res)=>{
-            let query = {} //for get all data
-            if(req.query.service_id){
-                query = {
-                    service_id: req.query.service_id
-                }
-            }
-            const cursor = reviewCollection.find(query).sort({lastModified:-1});
+        // app.get('/reviews',async(req,res)=>{
+        //     let query = {} //for get all data
+        //     if(req.query.service_id){
+        //         query = {
+        //             service_id: req.query.service_id
+        //         }
+        //     }
+        //     const cursor = reviewCollection.find(query).sort({lastModified:-1});
 
-            const reviews = await cursor.toArray();
+        //     const reviews = await cursor.toArray();
            
-             res.send(reviews);
-         })
+        //      res.send(reviews);
+        //  })
 
          app.get('/reviews',async(req,res)=>{
+            console.log(req.query)
             let query = {} //for get all data
             if(req.query.email){
                 query = {
                     email: req.query.email
                 }
             }
-            const cursor = reviewCollection.find(query).sort({lastModified:-1});
+            if(req.query.service_id){
+                        query = {
+                            service_id: req.query.service_id
+                        }
+                    }
+            const cursor = reviewCollection.find(query).sort({lastModified:1});
 
             const reviews = await cursor.toArray();
-           console.log(reviews);
+           
              res.send(reviews);
          })
 
